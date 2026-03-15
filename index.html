@@ -113,9 +113,9 @@
 <script>
     let sb = null;
     // SILAKAN ISI DATA ANDA DI SINI
-    const URL = "SB_URL_ANDA";
-    const KEY = "SB_ANON_KEY_ANDA";
-    const PASS = "PASSWORD_ADMIN_ANDA";
+    const URL = "https://ojvksgvouqwadmkweedb.supabase.co";
+    const KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
+    const PASS = "Janganasem19";
 
     function login() { if(document.getElementById('passcode').value === PASS){ document.getElementById('login-screen').classList.add('hidden'); document.getElementById('main-screen').classList.remove('hidden'); init(); }else{ alert("Passcode Salah!"); } }
     async function init() { sb = supabase.createClient(URL, KEY); fetch(); }
