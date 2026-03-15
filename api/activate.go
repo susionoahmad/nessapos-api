@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -24,17 +25,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	cleanKey := strings.TrimSpace(req.SerialKey)
 	cleanDeviceID := strings.TrimSpace(req.DeviceID)
 
-	// 2. Cek Konfigurasi (Internal Check)
+	// 2. Cek Konfigurasi
 	sbUrl := os.Getenv("SUPABASE_URL")
 	sbKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
 	privKeyB64 := os.Getenv("LICENSE_PRIVATE_KEY")
 
 	if sbUrl == "" || sbKey == "" {
-		sendError(w, "Konfigurasi Server Belum Lengkap (Vercel Env Vars Kosong)", 500)
+		sendError(w, "Konfigurasi Server Vercel belum lengkap", 500)
 		return
 	}
 
-	// 3. Panggil Supabase
+	// 3. Cari Lisensi di Supabase
 	apiUrl := fmt.Sprintf("%s/rest/v1/licenses?serial_key=eq.%s&select=*", sbUrl, cleanKey)
 	client := &http.Client{Timeout: 15 * time.Second}
 	sbReq, _ := http.NewRequest("GET", apiUrl, nil)
@@ -43,36 +44,43 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := client.Do(sbReq)
 	if err != nil {
-		sendError(w, "Gagal koneksi ke Supabase: "+err.Error(), 500)
+		sendError(w, "Gagal koneksi ke database", 500)
 		return
 	}
 	defer resp.Body.Close()
-
-	// Jika Supabase menolak (Penyebab 401 sesungguhnya)
-	if resp.StatusCode != 200 {
-		var sbErr map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&sbErr)
-		msg, _ := sbErr["message"].(string)
-		sendError(w, fmt.Sprintf("Supabase Error (%d): %s", resp.StatusCode, msg), 401)
-		return
-	}
 
 	var result []map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
 
 	if len(result) == 0 {
-		sendError(w, fmt.Sprintf("Serial Key [%s] tidak ditemukan di database", cleanKey), 404)
+		sendError(w, "Serial Key tidak ditemukan", 404)
 		return
 	}
 
 	licenseData := result[0]
-	isActive, _ := licenseData["is_active"].(bool)
-	if !isActive {
-		sendError(w, "Lisensi ini statusnya tidak aktif (Blocked)", 403)
+	dbDeviceID, _ := licenseData["device_id"].(string)
+
+	// 4. LOGIKA BINDING (Simpan ke Database jika masih kosong)
+	if dbDeviceID == "" {
+		updateUrl := fmt.Sprintf("%s/rest/v1/licenses?serial_key=eq.%s", sbUrl, cleanKey)
+		updateData, _ := json.Marshal(map[string]string{
+			"device_id":    cleanDeviceID,
+			"activated_at": time.Now().Format(time.RFC3339),
+		})
+		
+		upReq, _ := http.NewRequest("PATCH", updateUrl, bytes.NewBuffer(updateData))
+		upReq.Header.Set("apikey", sbKey)
+		upReq.Header.Set("Authorization", "Bearer "+sbKey)
+		upReq.Header.Set("Content-Type", "application/json")
+		
+		// Eksekusi update ke Supabase
+		client.Do(upReq)
+	} else if strings.TrimSpace(dbDeviceID) != cleanDeviceID {
+		sendError(w, "Lisensi ini sudah terkunci untuk perangkat lain", 403)
 		return
 	}
 
-	// 4. Data Lisensi
+	// 5. Data untuk Lisensi
 	customerName, _ := licenseData["customer_name"].(string)
 	expiryDays := 365
 	if val, ok := licenseData["expiry_days"].(float64); ok {
@@ -85,27 +93,24 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		expiry = now.AddDate(0, 0, expiryDays).Format("2006-01-02")
 	}
 
-	// 5. Digital Signing
+	// 6. Tanda Tangani Lisensi
 	privKeyBytes, _ := base64.StdEncoding.DecodeString(strings.TrimSpace(privKeyB64))
-	if len(privKeyBytes) != ed25519.PrivateKeySize {
-		sendError(w, "Internal Error: Private Key di Vercel tidak valid", 500)
-		return
-	}
-	
 	privKey := ed25519.PrivateKey(privKeyBytes)
+	
 	issuedAt := now.Format(time.RFC3339)
-	msgData := fmt.Sprintf("%s|%s|%s|%s", customerName, cleanDeviceID, issuedAt, expiry)
-	sig := ed25519.Sign(privKey, []byte(msgData))
+	payload := map[string]string{
+		"issued_to": customerName,
+		"device_id": cleanDeviceID,
+		"issued_at": issuedAt,
+		"expiry":    expiry,
+	}
 
-	// 6. Respon Sukses
+	msg := fmt.Sprintf("%s|%s|%s|%s", payload["issued_to"], payload["device_id"], payload["issued_at"], payload["expiry"])
+	sig := ed25519.Sign(privKey, []byte(msg))
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"payload": map[string]string{
-			"issued_to": customerName,
-			"device_id": cleanDeviceID,
-			"issued_at": issuedAt,
-			"expiry":    expiry,
-		},
+		"payload":   payload,
 		"signature": base64.StdEncoding.EncodeToString(sig),
 	})
 }
