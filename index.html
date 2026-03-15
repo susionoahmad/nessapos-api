@@ -193,7 +193,12 @@
                         <td style="font-weight: 600;">${lc.customer_name}</td>
                         <td class="font-mono">${lc.serial_key}</td>
                         <td><span class="badge ${lc.is_active ? 'badge-active' : 'badge-blocked'}">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
-                        <td>${lc.expiry_days == 0 ? 'Indefinite' : lc.expiry_days + ' Days'}</td>
+                        <td>
+                            ${lc.expiry_date ? 
+                                `<span style="color:var(--accent); font-weight:bold;">Sampai ${lc.expiry_date}</span>` : 
+                                (lc.expiry_days == 0 ? 'Indefinite' : lc.expiry_days + ' Days Paket')
+                            }
+                        </td>
                         <td style="color: var(--text-muted); font-size: 0.75rem;">${lc.device_id ? lc.device_id.substring(0, 15) + '...' : 'Waiting...'}</td>
                         <td style="display:flex; gap:0.5rem">
                             <button onclick="resetDevice(${lc.id})" class="btn" style="padding:0.4rem 0.8rem; font-size:0.7rem; background:rgba(255,255,255,0.05)">Reset</button>
