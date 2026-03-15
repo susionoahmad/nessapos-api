@@ -1,146 +1,213 @@
-<div id="main-screen" class="hidden max-w-6xl mx-auto">
-    <header class="flex justify-between items-center mb-10">
-        <div>
-            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">NessaPOS</h1>
-            <p class="text-slate-500">License Management System</p>
-        </div>
-        <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
-            <span>+</span> Buat Lisensi Baru
-        </button>
-    </header>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NessaPOS | Admin Central</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.1);
+        }
 
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50 border-b border-slate-200">
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container { width: 100%; max-width: 1100px; }
+
+        #login-screen {
+            max-width: 400px;
+            width: 100%;
+            margin: 10vh auto;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1.logo-text {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+
+        input, select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
+        .btn {
+            cursor: pointer; border: none; padding: 0.8rem 1.5rem; border-radius: 12px;
+            font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4); }
+
+        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem; }
+        .btn-add { background: var(--accent); color: white; padding: 0.7rem 1.2rem; }
+
+        .dashboard-card {
+            background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border);
+            border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: rgba(255, 255, 255, 0.03); padding: 1.2rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        td { padding: 1.2rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        .badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+        .badge-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .badge-blocked { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        .font-mono { font-family: 'Consolas', monospace; color: #818cf8; font-weight: 600; }
+        .actions { display: flex; gap: 0.5rem; }
+        .btn-icon { padding: 0.5rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.75rem; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: #1e293b; width: 100%; max-width: 450px; padding: 2.5rem; border-radius: 24px; border: 1px solid var(--border); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="login-screen">
+            <h1 class="logo-text">NessaPOS</h1>
+            <p class="subtitle">Management Central</p>
+            <div class="input-group">
+                <label>Passcode Rahasia</label>
+                <input type="password" id="passcode" placeholder="••••••••">
+            </div>
+            <button onclick="login()" class="btn btn-primary">Authenticate</button>
+        </div>
+
+        <div id="main-screen" class="hidden">
+            <header>
+                <div><h1 class="logo-text">NessaPOS</h1><p class="subtitle" style="margin-bottom: 0;">License Management System</p></div>
+                <button onclick="showCreateModal()" class="btn btn-add">Generate New Key</button>
+            </header>
+            <div class="dashboard-card">
+                <table>
+                    <thead><tr><th>Store Name</th><th>Serial Key</th><th>Status</th><th>Duration</th><th>Hardware ID</th><th>Actions</th></tr></thead>
+                    <tbody id="license-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">New License</h2>
+            <div class="input-group"><label>Customer/Store Name</label><input type="text" id="new-name" placeholder="e.g., Toko Berkah Jaya"></div>
+            <div class="input-group"><label>Serial Key</label><div style="display:flex;gap:0.5rem"><input type="text" id="new-key" readonly><button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.05)">🔄</button></div></div>
+            <div class="input-group"><label>Validity Duration</label><select id="new-expiry"><option value="365">1 Year</option><option value="30">1 Month</option><option value="3">3 Days (Trial)</option><option value="0">Life-time</option></select></div>
+            <div style="display:flex;gap:1rem;margin-top:2rem"><button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Cancel</button><button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Confirm & Save</button></div>
+        </div>
+    </div>
+
+    <script>
+        let sb = null;
+        // ISI DATA INI:
+        const SB_URL = "https://ojvksgvouqwadmkweedb.supabase.co";
+        const SB_KEY = "Isb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
+        const SECRET_PASS = "Janganasem19"; 
+
+        function login() {
+            if (document.getElementById('passcode').value !== SECRET_PASS) return alert("Passcode Salah!");
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            initSupabase();
+        }
+
+        async function initSupabase() {
+            sb = supabase.createClient(SB_URL, SB_KEY);
+            fetchLicenses();
+        }
+
+        async function fetchLicenses() {
+            const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
+            const body = document.getElementById('license-list-body');
+            body.innerHTML = data.map(lc => `
                 <tr>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Toko</th>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Serial Key</th>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Masa Berlaku</th>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Terdaftar Di</th>
-                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
+                    <td style="font-weight: 600;">${lc.customer_name}</td>
+                    <td class="font-mono">${lc.serial_key}</td>
+                    <td><span class="badge ${lc.is_active ? 'badge-active' : 'badge-blocked'}">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
+                    <td>${lc.expiry_days == 0 ? 'Indefinite' : lc.expiry_days + ' Days'}</td>
+                    <td style="color: var(--text-muted); font-size: 0.75rem;">${lc.device_id ? lc.device_id.substring(0, 15) + '...' : 'Waiting...'}</td>
+                    <td class="actions">
+                        <button onclick="resetDevice(${lc.id})" class="btn-icon">Reset ID</button>
+                        <button onclick="toggleActive(${lc.id}, ${!lc.is_active})" class="btn-icon" style="color:${lc.is_active ? '#f87171' : '#34d399'}">${lc.is_active ? 'Block' : 'Unblock'}</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody id="license-list-body" class="divide-y divide-slate-100">
-                <!-- Data akan muncul di sini -->
-            </tbody>
-        </table>
-    </div>
-</div>
+            `).join('');
+        }
 
-<!-- Modal Buat Lisensi -->
-<div id="modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-        <h2 class="text-xl font-bold mb-6">Buat Lisensi Baru</h2>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Nama Pembeli</label>
-                <input type="text" id="new-name" placeholder="Contoh: Toko Berkah" class="w-full p-3 border rounded-xl outline-none">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Serial Key</label>
-                <div class="flex gap-2">
-                    <input type="text" id="new-key" class="w-full p-3 border rounded-xl bg-slate-50" readonly>
-                    <button onclick="generateRandomKey()" class="bg-slate-200 p-3 rounded-xl px-4">🔄</button>
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Masa Berlaku (Hari)</label>
-                <select id="new-expiry" class="w-full p-3 border rounded-xl">
-                    <option value="365">1 Tahun</option>
-                    <option value="30">1 Bulan</option>
-                    <option value="3">Trial 3 Hari</option>
-                    <option value="0">Permanen</option>
-                </select>
-            </div>
-            <div class="flex gap-3 pt-4">
-                <button onclick="hideModal()" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold">Batal</button>
-                <button onclick="saveLicense()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Simpan</button>
-            </div>
-        </div>
-    </div>
-</div>
+        function generateRandomKey() {
+            const part = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+            document.getElementById('new-key').value = `NP-${part()}-${part()}-${part()}-${part()}`;
+        }
 
-<script>
-    let sb = null;
-    let adminPass = "Janganasem19"; // Ganti ini nanti di Vercel
+        function showCreateModal() { generateRandomKey(); document.getElementById('modal').style.display = 'flex'; }
+        function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
-    function login() {
-        const pass = document.getElementById('passcode').value;
-        // Tips: Anda bisa membandingkan pass dengan ENV dari Vercel nantinya
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-screen').classList.remove('hidden');
-        initSupabase();
-    }
+        async function saveLicense() {
+            const name = document.getElementById('new-name').value;
+            const key = document.getElementById('new-key').value;
+            const exp = document.getElementById('new-expiry').value;
+            if (!name) return alert("Isi Nama!");
+            await sb.from('licenses').insert([{ serial_key: key, customer_name: name, expiry_days: parseInt(exp), is_active: true }]);
+            hideModal(); fetchLicenses();
+        }
 
-    async function initSupabase() {
-        // Data ini tidak apa-apa terlihat di client karena pengamanan ada di RLS Supabase / Logic Server
-        const SUPABASE_URL = "https://ojvksgvouqwadmkweedb.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
-        sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        fetchLicenses();
-    }
+        async function resetDevice(id) {
+            if(!confirm("Hapus hardware binding?")) return;
+            await sb.from('licenses').update({ device_id: null, activated_at: null }).eq('id', id);
+            fetchLicenses();
+        }
 
-    async function fetchLicenses() {
-        const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
-        if (error) return alert("Error: " + error.message);
-        
-        const body = document.getElementById('license-list-body');
-        body.innerHTML = data.map(lc => `
-            <tr class="hover:bg-slate-50 transition">
-                <td class="p-4 font-semibold text-slate-800">${lc.customer_name}</td>
-                <td class="p-4 font-mono text-sm text-blue-600 font-bold">${lc.serial_key}</td>
-                <td class="p-4">
-                    <span class="px-2 py-1 rounded-full text-xs font-bold ${lc.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
-                        ${lc.is_active ? 'Aktif' : 'Blokir'}
-                    </span>
-                </td>
-                <td class="p-4 text-slate-600">${lc.expiry_days == 0 ? 'Permanen' : lc.expiry_days + ' Hari'}</td>
-                <td class="p-4 text-xs text-slate-400 max-w-[150px] truncate">${lc.device_id || '- Belum Terdaftar -'}</td>
-                <td class="p-4 flex gap-2">
-                    <button onclick="resetDevice(${lc.id})" class="text-xs bg-slate-100 hover:bg-slate-200 p-2 rounded-lg font-bold" title="Hapus Device ID agar bisa dipindah PC">Reset ID</button>
-                    <button onclick="toggleActive(${lc.id}, ${!lc.is_active})" class="text-xs ${lc.is_active ? 'text-red-600' : 'text-emerald-600'} font-bold">${lc.is_active ? 'Blokir' : 'Aktifkan'}</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function generateRandomKey() {
-        const part = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-        document.getElementById('new-key').value = `${part()}-${part()}-${part()}-${part()}`;
-    }
-
-    function showCreateModal() {
-        generateRandomKey();
-        document.getElementById('modal').classList.remove('hidden');
-    }
-
-    function hideModal() { document.getElementById('modal').classList.add('hidden'); }
-
-    async function saveLicense() {
-        const name = document.getElementById('new-name').value;
-        const key = document.getElementById('new-key').value;
-        const exp = document.getElementById('new-expiry').value;
-        
-        const { error } = await sb.from('licenses').insert([{ 
-            serial_key: key, 
-            customer_name: name, 
-            expiry_days: parseInt(exp),
-            is_active: true 
-        }]);
-        
-        if (error) alert(error.message);
-        else { hideModal(); fetchLicenses(); }
-    }
-
-    async function resetDevice(id) {
-        if(!confirm("Hapus Device ID? User bisa aktivasi ulang di PC baru.")) return;
-        await sb.from('licenses').update({ device_id: null, activated_at: null }).eq('id', id);
-        fetchLicenses();
-    }
-
-    async function toggleActive(id, state) {
-        await sb.from('licenses').update({ is_active: state }).eq('id', id);
-        fetchLicenses();
-    }
-</script>
+        async function toggleActive(id, state) {
+            await sb.from('licenses').update({ is_active: state }).eq('id', id);
+            fetchLicenses();
+        }
+    </script>
+</body>
+</html>
