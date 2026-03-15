@@ -90,9 +90,13 @@
                 <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.05)">🔄</button>
             </div>
             <select id="new-expiry">
-                <option value="365">Paket 1 Tahun</option>
-                <option value="30">Paket 1 Bulan</option>
-                <option value="0">Permanen (Lifetime)</option>
+                <select id="new-expiry">
+                    <option value="365">Paket 1 Tahun (Resmi)</option>
+                    <option value="30">Paket 1 Bulan (Pro)</option>
+                    <option value="7">Trial 7 Hari (Demo)</option>
+                    <option value="3">Trial 3 Hari (Cepat)</option>
+                    <option value="0">Permanen (Lifetime)</option>
+                </select>
             </select>
             <div style="display:flex;gap:1rem">
                 <button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Batal</button>
