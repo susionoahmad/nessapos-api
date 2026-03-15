@@ -9,11 +9,13 @@
     <style>
         :root { 
             --primary: #6366f1; 
+            --primary-hover: #4f46e5;
             --bg-dark: #0f172a; 
             --card-bg: rgba(30, 41, 59, 0.7); 
             --text-main: #f1f5f9; 
             --text-muted: #94a3b8; 
             --accent: #10b981; 
+            --warning: #f59e0b;
             --border: rgba(255, 255, 255, 0.1); 
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
@@ -23,13 +25,16 @@
             color: var(--text-main); min-height: 100vh; padding: 2rem; display: flex; justify-content: center; 
         }
         .container { width: 100%; max-width: 1150px; }
-        #login-screen { max-width: 400px; margin: 10vh auto; background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); padding: 2.5rem; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        #login-screen { max-width: 400px; margin: 10vh auto; background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); padding: 2.5rem; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; }
         h1.logo-text { font-size: 2.2rem; font-weight: 700; background: linear-gradient(to right, #818cf8, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; }
-        input, select { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); padding: 0.8rem 1rem; border-radius: 12px; color: white; outline: none; margin-bottom: 1.5rem; }
-        input:focus { border-color: var(--primary); }
+        label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; text-align: left; }
+        input, select { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); padding: 0.8rem 1rem; border-radius: 12px; color: white; outline: none; margin-bottom: 1.5rem; transition: border 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); }
+        select option { background: #1e293b; color: white; }
         .btn { cursor: pointer; border: none; padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
         .btn-add { background: var(--accent); color: white; }
         .dashboard-card { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
@@ -41,31 +46,37 @@
         .badge-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
         .font-mono { font-family: 'Consolas', monospace; color: #818cf8; font-weight: 600; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; }
-        .modal-content { background: #1e293b; width: 100%; max-width: 450px; padding: 2.5rem; border-radius: 24px; border: 1px solid var(--border); border-top: 4px solid var(--primary); }
+        .modal-content { background: #1e293b; width: 100%; max-width: 450px; padding: 2.5rem; border-radius: 24px; border: 1px solid var(--border); border-top: 4px solid var(--primary); box-shadow: 0 25px 60px rgba(0,0,0,0.5); }
         .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Login -->
+        <!-- Login Screen -->
         <div id="login-screen">
             <h1 class="logo-text">NessaPOS</h1>
-            <p class="subtitle">Admin Control Center</p>
+            <p class="subtitle">Admin Management System</p>
             <input type="password" id="passcode" placeholder="Passcode Rahasia">
             <button onclick="login()" class="btn btn-primary">Authenticate</button>
         </div>
 
-        <!-- Dashboard -->
+        <!-- Main Dashboard -->
         <div id="main-screen" class="hidden">
             <header>
-                <div><h1 class="logo-text">NessaPOS</h1><p class="subtitle" style="margin:0">Premium License Manager v2.5</p></div>
-                <button onclick="showCreateModal()" class="btn btn-add">Generate New License</button>
+                <div>
+                    <h1 class="logo-text">NessaPOS</h1>
+                    <p class="subtitle" style="margin:0">Premium License Manager v2.7</p>
+                </div>
+                <button onclick="showCreateModal()" class="btn btn-add">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Buat Lisensi Baru
+                </button>
             </header>
             <div class="dashboard-card">
                 <table>
                     <thead>
                         <tr>
-                            <th>Store Name</th>
+                            <th>Nama Toko</th>
                             <th>Serial Key</th>
                             <th>Status</th>
                             <th>Masa Aktif</th>
@@ -78,23 +89,23 @@
             </div>
         </div>
     </div>
-<div id="modal" class="modal-overlay">
-    <div class="modal-content">
-        <h2 style="margin-bottom:1.5rem">New License Pool</h2>
-        <div style="margin-bottom:1.5rem">
-            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Customer Name:</label>
-            <input type="text" id="new-name" placeholder="Store or Client Name" style="margin:0">
-        </div>
-        <div style="margin-bottom:1.5rem">
-            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Generated Serial Key:</label>
-            <div style="display:flex;gap:0.5rem">
+
+    <!-- Modal Form -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom:1.5rem">Registrasi Lisensi</h2>
+            
+            <label>Nama Toko / Pelanggan:</label>
+            <input type="text" id="new-name" placeholder="Contoh: Toko Berkah Jaya">
+
+            <label>Generated Serial Key:</label>
+            <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem">
                 <input type="text" id="new-key" readonly style="margin:0; font-family:monospace; background:rgba(0,0,0,0.2)">
-                <button onclick="copyToClipboard()" id="btn-copy" class="btn" style="background:rgba(99,102,241,0.2)">📋</button>
-                <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.1)">🔄</button>
+                <button onclick="copyToClipboard()" id="btn-copy" class="btn" style="background:rgba(99,102,241,0.2)" title="Copy Key">📋</button>
+                <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.1)" title="Ganti Key">🔄</button>
             </div>
-        </div>
-        <div style="margin-bottom:2.5rem">
-            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Select Duration Package:</label>
+
+            <label>Pilih Paket Durasi:</label>
             <select id="new-expiry">
                 <option value="365">Paket 1 Tahun (Resmi)</option>
                 <option value="30">Paket 1 Bulan (Pro)</option>
@@ -102,56 +113,92 @@
                 <option value="3">Trial 3 Hari (Cepat)</option>
                 <option value="0">Permanen (Lifetime)</option>
             </select>
-        </div>
-        <div style="display:flex;gap:1rem">
-            <button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Cancel</button>
-            <button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Confirm & Save</button>
+
+            <div style="display:flex;gap:1rem">
+                <button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Batal</button>
+                <button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Simpan & Aktifkan</button>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    let sb = null;
-    // SILAKAN ISI DATA ANDA DI SINI
-    const URL = "https://ojvksgvouqwadmkweedb.supabase.co";
-    const KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
-    const PASS = "Janganasem19";
+    <script>
+        let sb = null;
+        // PENTING: Isi data Supabase Anda di sini
+       const URL = "https://ojvksgvouqwadmkweedb.supabase.co";
+       const KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
+       const PASS = "Janganasem19";
 
-    function login() { if(document.getElementById('passcode').value === PASS){ document.getElementById('login-screen').classList.add('hidden'); document.getElementById('main-screen').classList.remove('hidden'); init(); }else{ alert("Passcode Salah!"); } }
-    async function init() { sb = supabase.createClient(URL, KEY); fetch(); }
-    async function fetch() {
-        const { data } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
-        const body = document.getElementById('license-list-body');
-        body.innerHTML = data.map(lc => `
-            <tr>
-                <td style="font-weight:600">${lc.customer_name}</td>
-                <td style="font-family:monospace; color:#818cf8; font-weight:bold">${lc.serial_key}</td>
-                <td><span class="badge badge-active">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
-                <td>
-                    ${lc.expiry_date ? 
-                        `<span style="color:var(--accent); font-weight:bold;">Hingga ${lc.expiry_date}</span>` : 
-                        (lc.expiry_days == 0 ? 'Permanen' : `<span style="color:var(--warning)">${lc.expiry_days} Hari (Belum Aktif)</span>`)
-                    }
-                </td>
-                <td style="font-size:0.75rem; color:var(--text-muted)">${lc.device_id ? lc.device_id.substring(0,14)+'...' : '<span style="opacity:0.3">Waiting...</span>'}</td>
-                <td><button onclick="reset(${lc.id})" class="btn" style="padding:4px 10px; font-size:11px; background:rgba(255,255,255,0.05)">Reset</button></td>
-            </tr>
-        `).join('');
-    }
-    function generateRandomKey() { const p = () => Math.random().toString(36).substring(2,6).toUpperCase(); document.getElementById('new-key').value = `NP-${p()}-${p()}-${p()}-${p()}`; document.getElementById('btn-copy').innerText="📋"; }
-    function copyToClipboard() { const k = document.getElementById('new-key'); k.select(); document.execCommand('copy'); document.getElementById('btn-copy').innerText="✅"; setTimeout(() => { document.getElementById('btn-copy').innerText="📋"; }, 2000); }
-    function showCreateModal() { generateRandomKey(); document.getElementById('modal').style.display='flex'; }
-    function hideModal() { document.getElementById('modal').style.display='none'; }
-    async function saveLicense() {
-        const n = document.getElementById('new-name').value;
-        const k = document.getElementById('new-key').value;
-        const e = document.getElementById('new-expiry').value;
-        if(!n) return alert("Pilih Nama!");
-        const { error } = await sb.from('licenses').insert([{ serial_key: k, customer_name: n, expiry_days: parseInt(e), is_active: true }]);
-        if(error) alert(error.message);
-        else { hideModal(); fetch(); }
-    }
-    async function reset(id) { if(confirm("Reset ID?")) { await sb.from('licenses').update({ device_id: null }).eq('id', id); fetch(); } }
-</script>
+        function login() { 
+            if(document.getElementById('passcode').value === SECRET_PASS){ 
+                document.getElementById('login-screen').classList.add('hidden'); 
+                document.getElementById('main-screen').classList.remove('hidden'); 
+                initSupabase(); 
+            } else { alert("Passcode Salah!"); } 
+        }
+
+        async function initSupabase() { 
+            sb = supabase.createClient(SB_URL, SB_KEY); 
+            fetchLicenses(); 
+        }
+
+        async function fetchLicenses() {
+            const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
+            if (error) return console.error(error);
+            
+            const body = document.getElementById('license-list-body');
+            body.innerHTML = data.map(lc => `
+                <tr>
+                    <td style="font-weight:600">${lc.customer_name}</td>
+                    <td class="font-mono" style="color:#818cf8">${lc.serial_key}</td>
+                    <td><span class="badge badge-active">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
+                    <td>
+                        ${lc.expiry_date ? 
+                            `<span style="color:var(--accent); font-weight:bold;">Hingga ${lc.expiry_date}</span>` : 
+                            (lc.expiry_days == 0 ? 'Permanen' : `<span style="color:var(--warning)">${lc.expiry_days} Hari (Belum Aktif)</span>`)
+                        }
+                    </td>
+                    <td style="font-size:0.75rem; color:var(--text-muted)">${lc.device_id ? lc.device_id.substring(0,14)+'...' : '<span style="opacity:0.3">Waiting...</span>'}</td>
+                    <td>
+                        <button onclick="resetDevice(${lc.id})" class="btn" title="Reset Hardware ID" style="padding:4px 10px; font-size:11px; background:rgba(255,255,255,0.05)">Reset</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function generateRandomKey() { 
+            const p = () => Math.random().toString(36).substring(2,6).toUpperCase(); 
+            document.getElementById('new-key').value = `NP-${p()}-${p()}-${p()}-${p()}`; 
+            document.getElementById('btn-copy').innerText="📋"; 
+        }
+        
+        function copyToClipboard() { 
+            const k = document.getElementById('new-key'); 
+            k.select(); 
+            document.execCommand('copy'); 
+            document.getElementById('btn-copy').innerText="✅"; 
+            setTimeout(() => { document.getElementById('btn-copy').innerText="📋"; }, 2000);
+        }
+
+        function showCreateModal() { generateRandomKey(); document.getElementById('modal').style.display='flex'; }
+        function hideModal() { document.getElementById('modal').style.display='none'; }
+
+        async function saveLicense() {
+            const n = document.getElementById('new-name').value;
+            const k = document.getElementById('new-key').value;
+            const e = document.getElementById('new-expiry').value;
+            if(!n) return alert("Mohon isi Nama Pembeli!");
+            
+            const { error } = await sb.from('licenses').insert([{ serial_key: k, customer_name: n, expiry_days: parseInt(e), is_active: true }]);
+            if(error) alert(error.message);
+            else { hideModal(); fetchLicenses(); }
+        }
+
+        async function resetDevice(id) { 
+            if(confirm("Hapus Hardware ID? Pembeli bisa pakai di komputer baru, tapi waktu tetap berlanjut.")) { 
+                await sb.from('licenses').update({ device_id: null }).eq('id', id); 
+                fetchLicenses(); 
+            } 
+        }
+    </script>
 </body>
 </html>
