@@ -78,105 +78,80 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal Create -->
-    <div id="modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 style="margin-bottom:1rem">New License</h2>
-            <input type="text" id="new-name" placeholder="Nama Toko / Pelanggan">
-            <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem">
+<div id="modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="margin-bottom:1.5rem">New License Pool</h2>
+        <div style="margin-bottom:1.5rem">
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Customer Name:</label>
+            <input type="text" id="new-name" placeholder="Store or Client Name" style="margin:0">
+        </div>
+        <div style="margin-bottom:1.5rem">
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Generated Serial Key:</label>
+            <div style="display:flex;gap:0.5rem">
                 <input type="text" id="new-key" readonly style="margin:0; font-family:monospace; background:rgba(0,0,0,0.2)">
                 <button onclick="copyToClipboard()" id="btn-copy" class="btn" style="background:rgba(99,102,241,0.2)">📋</button>
-                <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.05)">🔄</button>
-            </div>
-            <select id="new-expiry">
-                    <option value="365">Paket 1 Tahun (Resmi)</option>
-                    <option value="30">Paket 1 Bulan (Pro)</option>
-                    <option value="7">Trial 7 Hari (Demo)</option>
-                    <option value="3">Trial 3 Hari (Cepat)</option>
-                    <option value="0">Permanen (Lifetime)</option>
-            </select>
-            <div style="display:flex;gap:1rem">
-                <button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Batal</button>
-                <button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Confirm & Save</button>
+                <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.1)">🔄</button>
             </div>
         </div>
+        <div style="margin-bottom:2.5rem">
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.5rem">Select Duration Package:</label>
+            <select id="new-expiry">
+                <option value="365">Paket 1 Tahun (Resmi)</option>
+                <option value="30">Paket 1 Bulan (Pro)</option>
+                <option value="7">Trial 7 Hari (Demo)</option>
+                <option value="3">Trial 3 Hari (Cepat)</option>
+                <option value="0">Permanen (Lifetime)</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:1rem">
+            <button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Cancel</button>
+            <button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Confirm & Save</button>
+        </div>
     </div>
+</div>
 
-    <script>
-        let sb = null;
-        // PENTING: ISI DISINI
-        const SB_URL = "https://ojvksgvouqwadmkweedb.supabase.co";
-        const SB_KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
-        const SECRET_PASS = "Janganasem19"; 
+<script>
+    let sb = null;
+    // SILAKAN ISI DATA ANDA DI SINI
+    const URL = "SB_URL_ANDA";
+    const KEY = "SB_ANON_KEY_ANDA";
+    const PASS = "PASSWORD_ADMIN_ANDA";
 
-        function login() { 
-            if(document.getElementById('passcode').value === SECRET_PASS){ 
-                document.getElementById('login-screen').classList.add('hidden'); 
-                document.getElementById('main-screen').classList.remove('hidden'); 
-                initSupabase(); 
-            } else { alert("Passcode Salah!"); } 
-        }
-
-        async function initSupabase() { 
-            sb = supabase.createClient(SB_URL, SB_KEY); 
-            fetchLicenses(); 
-        }
-
-        async function fetchLicenses() {
-            const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
-            if (error) return console.error(error);
-            
-            const body = document.getElementById('license-list-body');
-            body.innerHTML = data.map(lc => `
-                <tr>
-                    <td style="font-weight:600">${lc.customer_name}</td>
-                    <td class="font-mono">${lc.serial_key}</td>
-                    <td><span class="badge badge-active">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
-                    <td>
-                        ${lc.expiry_date ? 
-                            `<span style="color:var(--accent); font-weight:bold;">Hingga ${lc.expiry_date}</span>` : 
-                            (lc.expiry_days == 0 ? 'Permanen' : `<span style="opacity:0.6">${lc.expiry_days} Hari (Belum Aktif)</span>`)
-                        }
-                    </td>
-                    <td style="font-size:0.75rem; color:var(--text-muted)">${lc.device_id ? lc.device_id.substring(0,14)+'...' : '<span style="opacity:0.3">Waiting...</span>'}</td>
-                    <td>
-                        <button onclick="resetDevice(${lc.id})" class="btn" title="Reset Hardware Binding" style="padding:4px 10px; font-size:11px; background:rgba(255,255,255,0.05)">Reset</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function generateRandomKey() { const p = () => Math.random().toString(36).substring(2,6).toUpperCase(); document.getElementById('new-key').value = `NP-${p()}-${p()}-${p()}-${p()}`; document.getElementById('btn-copy').innerText="📋"; }
-        
-        function copyToClipboard() { 
-            const k = document.getElementById('new-key'); 
-            k.select(); 
-            document.execCommand('copy'); 
-            document.getElementById('btn-copy').innerText="✅"; 
-            setTimeout(() => { document.getElementById('btn-copy').innerText="📋"; }, 2000);
-        }
-
-        function showCreateModal() { generateRandomKey(); document.getElementById('modal').style.display='flex'; }
-        function hideModal() { document.getElementById('modal').style.display='none'; }
-
-        async function saveLicense() {
-            const name = document.getElementById('new-name').value;
-            const key = document.getElementById('new-key').value;
-            const exp = document.getElementById('new-expiry').value;
-            if(!name) return alert("Mohon isi Nama Pembeli!");
-            
-            const { error } = await sb.from('licenses').insert([{ serial_key: key, customer_name: name, expiry_days: parseInt(exp), is_active: true }]);
-            if(error) alert(error.message);
-            else { hideModal(); fetchLicenses(); }
-        }
-
-        async function resetDevice(id) { 
-            if(confirm("Hapus Hardware ID? User bisa aktivasi ulang di PC baru, masa aktif tetap berlanjut.")) { 
-                await sb.from('licenses').update({ device_id: null }).eq('id', id); 
-                fetchLicenses(); 
-            } 
-        }
-    </script>
+    function login() { if(document.getElementById('passcode').value === PASS){ document.getElementById('login-screen').classList.add('hidden'); document.getElementById('main-screen').classList.remove('hidden'); init(); }else{ alert("Passcode Salah!"); } }
+    async function init() { sb = supabase.createClient(URL, KEY); fetch(); }
+    async function fetch() {
+        const { data } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
+        const body = document.getElementById('license-list-body');
+        body.innerHTML = data.map(lc => `
+            <tr>
+                <td style="font-weight:600">${lc.customer_name}</td>
+                <td style="font-family:monospace; color:#818cf8; font-weight:bold">${lc.serial_key}</td>
+                <td><span class="badge badge-active">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
+                <td>
+                    ${lc.expiry_date ? 
+                        `<span style="color:var(--accent); font-weight:bold;">Hingga ${lc.expiry_date}</span>` : 
+                        (lc.expiry_days == 0 ? 'Permanen' : `<span style="color:var(--warning)">${lc.expiry_days} Hari (Belum Aktif)</span>`)
+                    }
+                </td>
+                <td style="font-size:0.75rem; color:var(--text-muted)">${lc.device_id ? lc.device_id.substring(0,14)+'...' : '<span style="opacity:0.3">Waiting...</span>'}</td>
+                <td><button onclick="reset(${lc.id})" class="btn" style="padding:4px 10px; font-size:11px; background:rgba(255,255,255,0.05)">Reset</button></td>
+            </tr>
+        `).join('');
+    }
+    function generateRandomKey() { const p = () => Math.random().toString(36).substring(2,6).toUpperCase(); document.getElementById('new-key').value = `NP-${p()}-${p()}-${p()}-${p()}`; document.getElementById('btn-copy').innerText="📋"; }
+    function copyToClipboard() { const k = document.getElementById('new-key'); k.select(); document.execCommand('copy'); document.getElementById('btn-copy').innerText="✅"; setTimeout(() => { document.getElementById('btn-copy').innerText="📋"; }, 2000); }
+    function showCreateModal() { generateRandomKey(); document.getElementById('modal').style.display='flex'; }
+    function hideModal() { document.getElementById('modal').style.display='none'; }
+    async function saveLicense() {
+        const n = document.getElementById('new-name').value;
+        const k = document.getElementById('new-key').value;
+        const e = document.getElementById('new-expiry').value;
+        if(!n) return alert("Pilih Nama!");
+        const { error } = await sb.from('licenses').insert([{ serial_key: k, customer_name: n, expiry_days: parseInt(e), is_active: true }]);
+        if(error) alert(error.message);
+        else { hideModal(); fetch(); }
+    }
+    async function reset(id) { if(confirm("Reset ID?")) { await sb.from('licenses').update({ device_id: null }).eq('id', id); fetch(); } }
+</script>
 </body>
 </html>
