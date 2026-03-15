@@ -138,7 +138,15 @@
         <div class="modal-content">
             <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">New License</h2>
             <div class="input-group"><label>Customer/Store Name</label><input type="text" id="new-name" placeholder="e.g., Toko Berkah Jaya"></div>
-            <div class="input-group"><label>Serial Key</label><div style="display:flex;gap:0.5rem"><input type="text" id="new-key" readonly><button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.05)">🔄</button></div></div>
+            <!-- Bagian Input Serial di Modal -->
+            <div class="input-group">
+                <label>Serial Key</label>
+                <div style="display:flex;gap:0.5rem">
+                    <input type="text" id="new-key" readonly class="font-mono" style="background: rgba(0,0,0,0.2); border-color: var(--primary);">
+                    <button onclick="copyToClipboard()" class="btn" style="background:rgba(99, 102, 241, 0.2); color: var(--primary);" title="Copy Key">📋</button>
+                    <button onclick="generateRandomKey()" class="btn" style="background:rgba(255,255,255,0.05)">🔄</button>
+                </div>
+            </div>
             <div class="input-group"><label>Validity Duration</label><select id="new-expiry"><option value="365">1 Year</option><option value="30">1 Month</option><option value="3">3 Days (Trial)</option><option value="0">Life-time</option></select></div>
             <div style="display:flex;gap:1rem;margin-top:2rem"><button onclick="hideModal()" class="btn" style="background:rgba(255,255,255,0.05);flex:1">Cancel</button><button onclick="saveLicense()" class="btn btn-primary" style="flex:2">Confirm & Save</button></div>
         </div>
