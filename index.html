@@ -156,7 +156,7 @@
         let sb = null;
         // ISI DATA INI:
         const SB_URL = "https://ojvksgvouqwadmkweedb.supabase.co";
-        const SB_KEY = "Isb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
+        const SB_KEY = "sb_publishable_ayEcnHg21p81DA2T4_iIsw_985jDLTZ";
         const SECRET_PASS = "Janganasem19"; 
 
         function login() {
@@ -172,22 +172,40 @@
         }
 
         async function fetchLicenses() {
-            const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
-            const body = document.getElementById('license-list-body');
-            body.innerHTML = data.map(lc => `
-                <tr>
-                    <td style="font-weight: 600;">${lc.customer_name}</td>
-                    <td class="font-mono">${lc.serial_key}</td>
-                    <td><span class="badge ${lc.is_active ? 'badge-active' : 'badge-blocked'}">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
-                    <td>${lc.expiry_days == 0 ? 'Indefinite' : lc.expiry_days + ' Days'}</td>
-                    <td style="color: var(--text-muted); font-size: 0.75rem;">${lc.device_id ? lc.device_id.substring(0, 15) + '...' : 'Waiting...'}</td>
-                    <td class="actions">
-                        <button onclick="resetDevice(${lc.id})" class="btn-icon">Reset ID</button>
-                        <button onclick="toggleActive(${lc.id}, ${!lc.is_active})" class="btn-icon" style="color:${lc.is_active ? '#f87171' : '#34d399'}">${lc.is_active ? 'Block' : 'Unblock'}</button>
-                    </td>
-                </tr>
-            `).join('');
+            try {
+                const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error("Gagal ambil data:", error);
+                    return;
+                }
+
+                const body = document.getElementById('license-list-body');
+                if (!body) return; // Pastikan elemen ada
+                
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; opacity:0.5">Belum ada lisensi. Silakan buat baru.</td></tr>';
+                    return;
+                }
+
+                body.innerHTML = data.map(lc => `
+                    <tr>
+                        <td style="font-weight: 600;">${lc.customer_name}</td>
+                        <td class="font-mono">${lc.serial_key}</td>
+                        <td><span class="badge ${lc.is_active ? 'badge-active' : 'badge-blocked'}">${lc.is_active ? 'ACTIVE' : 'BLOCKED'}</span></td>
+                        <td>${lc.expiry_days == 0 ? 'Indefinite' : lc.expiry_days + ' Days'}</td>
+                        <td style="color: var(--text-muted); font-size: 0.75rem;">${lc.device_id ? lc.device_id.substring(0, 15) + '...' : 'Waiting...'}</td>
+                        <td style="display:flex; gap:0.5rem">
+                            <button onclick="resetDevice(${lc.id})" class="btn" style="padding:0.4rem 0.8rem; font-size:0.7rem; background:rgba(255,255,255,0.05)">Reset</button>
+                            <button onclick="toggleActive(${lc.id}, ${!lc.is_active})" class="btn" style="padding:0.4rem 0.8rem; font-size:0.7rem; background:rgba(255,255,255,0.05); color:${lc.is_active ? '#f87171' : '#34d399'}">${lc.is_active ? 'Block' : 'Unblock'}</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Error Sistem:", err);
+            }
         }
+
 
         function generateRandomKey() {
             const part = () => Math.random().toString(36).substring(2, 6).toUpperCase();
