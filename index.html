@@ -216,6 +216,41 @@
             await sb.from('licenses').update({ is_active: state }).eq('id', id);
             fetchLicenses();
         }
+                function copyToClipboard() {
+            const keyInput = document.getElementById('new-key');
+            
+            // Pilih teks di dalam input (Penting untuk mobile)
+            keyInput.select();
+            keyInput.setSelectionRange(0, 99999); 
+
+            try {
+                // Cara modern
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(keyInput.value).then(() => {
+                        showCopySuccess();
+                    });
+                } else {
+                    // Cara lama (Fallback) jika cara modern gagal
+                    document.execCommand('copy');
+                    showCopySuccess();
+                }
+            } catch (err) {
+                // Jika semua gagal, beri pesan manual
+                alert("Tekan Ctrl+C untuk menyalin: " + keyInput.value);
+            }
+        }
+
+        function showCopySuccess() {
+            const btn = document.getElementById('btn-copy');
+            const originalText = btn.innerText;
+            btn.innerText = "✅";
+            btn.style.color = "var(--accent)";
+            setTimeout(() => { 
+                btn.innerText = "📋"; 
+                btn.style.color = "var(--primary)";
+            }, 1500);
+        }
+
     </script>
 </body>
 </html>
