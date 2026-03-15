@@ -1,0 +1,146 @@
+<div id="main-screen" class="hidden max-w-6xl mx-auto">
+    <header class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">NessaPOS</h1>
+            <p class="text-slate-500">License Management System</p>
+        </div>
+        <button onclick="showCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
+            <span>+</span> Buat Lisensi Baru
+        </button>
+    </header>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Toko</th>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Serial Key</th>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Masa Berlaku</th>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Terdaftar Di</th>
+                    <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="license-list-body" class="divide-y divide-slate-100">
+                <!-- Data akan muncul di sini -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Buat Lisensi -->
+<div id="modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+        <h2 class="text-xl font-bold mb-6">Buat Lisensi Baru</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Nama Pembeli</label>
+                <input type="text" id="new-name" placeholder="Contoh: Toko Berkah" class="w-full p-3 border rounded-xl outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Serial Key</label>
+                <div class="flex gap-2">
+                    <input type="text" id="new-key" class="w-full p-3 border rounded-xl bg-slate-50" readonly>
+                    <button onclick="generateRandomKey()" class="bg-slate-200 p-3 rounded-xl px-4">🔄</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Masa Berlaku (Hari)</label>
+                <select id="new-expiry" class="w-full p-3 border rounded-xl">
+                    <option value="365">1 Tahun</option>
+                    <option value="30">1 Bulan</option>
+                    <option value="3">Trial 3 Hari</option>
+                    <option value="0">Permanen</option>
+                </select>
+            </div>
+            <div class="flex gap-3 pt-4">
+                <button onclick="hideModal()" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold">Batal</button>
+                <button onclick="saveLicense()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let sb = null;
+    let adminPass = "ADMIN_RAHASIA"; // Ganti ini nanti di Vercel
+
+    function login() {
+        const pass = document.getElementById('passcode').value;
+        // Tips: Anda bisa membandingkan pass dengan ENV dari Vercel nantinya
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-screen').classList.remove('hidden');
+        initSupabase();
+    }
+
+    async function initSupabase() {
+        // Data ini tidak apa-apa terlihat di client karena pengamanan ada di RLS Supabase / Logic Server
+        const SUPABASE_URL = "URL_SUPABASE_ANDA";
+        const SUPABASE_ANON_KEY = "KEY_ANON_ANDA";
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        fetchLicenses();
+    }
+
+    async function fetchLicenses() {
+        const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
+        if (error) return alert("Error: " + error.message);
+        
+        const body = document.getElementById('license-list-body');
+        body.innerHTML = data.map(lc => `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 font-semibold text-slate-800">${lc.customer_name}</td>
+                <td class="p-4 font-mono text-sm text-blue-600 font-bold">${lc.serial_key}</td>
+                <td class="p-4">
+                    <span class="px-2 py-1 rounded-full text-xs font-bold ${lc.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
+                        ${lc.is_active ? 'Aktif' : 'Blokir'}
+                    </span>
+                </td>
+                <td class="p-4 text-slate-600">${lc.expiry_days == 0 ? 'Permanen' : lc.expiry_days + ' Hari'}</td>
+                <td class="p-4 text-xs text-slate-400 max-w-[150px] truncate">${lc.device_id || '- Belum Terdaftar -'}</td>
+                <td class="p-4 flex gap-2">
+                    <button onclick="resetDevice(${lc.id})" class="text-xs bg-slate-100 hover:bg-slate-200 p-2 rounded-lg font-bold" title="Hapus Device ID agar bisa dipindah PC">Reset ID</button>
+                    <button onclick="toggleActive(${lc.id}, ${!lc.is_active})" class="text-xs ${lc.is_active ? 'text-red-600' : 'text-emerald-600'} font-bold">${lc.is_active ? 'Blokir' : 'Aktifkan'}</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function generateRandomKey() {
+        const part = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+        document.getElementById('new-key').value = `${part()}-${part()}-${part()}-${part()}`;
+    }
+
+    function showCreateModal() {
+        generateRandomKey();
+        document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function hideModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    async function saveLicense() {
+        const name = document.getElementById('new-name').value;
+        const key = document.getElementById('new-key').value;
+        const exp = document.getElementById('new-expiry').value;
+        
+        const { error } = await sb.from('licenses').insert([{ 
+            serial_key: key, 
+            customer_name: name, 
+            expiry_days: parseInt(exp),
+            is_active: true 
+        }]);
+        
+        if (error) alert(error.message);
+        else { hideModal(); fetchLicenses(); }
+    }
+
+    async function resetDevice(id) {
+        if(!confirm("Hapus Device ID? User bisa aktivasi ulang di PC baru.")) return;
+        await sb.from('licenses').update({ device_id: null, activated_at: null }).eq('id', id);
+        fetchLicenses();
+    }
+
+    async function toggleActive(id, state) {
+        await sb.from('licenses').update({ is_active: state }).eq('id', id);
+        fetchLicenses();
+    }
+</script>
