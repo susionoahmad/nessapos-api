@@ -13,24 +13,7 @@ import (
 	"time"
 )
 
-type LicensePayload struct {
-	IssuedTo string `json:"issued_to"`
-	DeviceID string `json:"device_id"`
-	IssuedAt string `json:"issued_at"`
-	Expiry   string `json:"expiry"`
-}
-
-type LicenseFile struct {
-	Payload   LicensePayload `json:"payload"`
-	Signature string         `json:"signature"`
-}
-
 func Handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	// 1. Ambil input
 	var req struct {
 		SerialKey string `json:"serial_key"`
@@ -39,74 +22,58 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	json.Unmarshal(body, &req)
 
-	// MEMBERSIHKAN INPUT (Sangat Penting)
 	cleanKey := strings.TrimSpace(req.SerialKey)
 	cleanDeviceID := strings.TrimSpace(req.DeviceID)
 
-	if cleanKey == "" || cleanDeviceID == "" {
-		sendError(w, "Harap masukkan Serial Key yang valid", 400)
+	// 2. Cek Konfigurasi (Internal Check)
+	sbUrl := os.Getenv("SUPABASE_URL")
+	sbKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+	privKeyB64 := os.Getenv("LICENSE_PRIVATE_KEY")
+
+	if sbUrl == "" || sbKey == "" {
+		sendError(w, "Konfigurasi Server Belum Lengkap (URL/Key Supabase Kosong di Vercel)", 500)
 		return
 	}
 
-	// 2. Cek Lisensi ke Supabase REST API
-	sbUrl := os.Getenv("SUPABASE_URL")
-	sbKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-	
-	// Gunakan filter yang lebih ketat tapi fleksibel
+	// 3. Panggil Supabase
 	apiUrl := fmt.Sprintf("%s/rest/v1/licenses?serial_key=eq.%s&select=*", sbUrl, cleanKey)
-	
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second}
 	sbReq, _ := http.NewRequest("GET", apiUrl, nil)
 	sbReq.Header.Set("apikey", sbKey)
 	sbReq.Header.Set("Authorization", "Bearer "+sbKey)
 
 	resp, err := client.Do(sbReq)
 	if err != nil {
-		sendError(w, "Database pusat tidak merespon", 500)
+		sendError(w, "Gagal koneksi ke Supabase: "+err.Error(), 500)
 		return
 	}
 	defer resp.Body.Close()
 
+	// Jika Supabase menolak (Penyebab 401 sesungguhnya)
+	if resp.StatusCode != 200 {
+		var sbErr map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&sbErr)
+		msg, _ := sbErr["message"].(string)
+		sendError(w, "Supabase Error ("+fmt.Sprint(resp.StatusCode)+"): "+msg, 401)
+		return
+	}
+
 	var result []map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
 
-	// JIKA TIDAK KETEMU (Penyebab 401)
 	if len(result) == 0 {
-		sendError(w, "Serial Key ["+cleanKey+"] tidak terdaftar di sistem kami", 401)
+		sendError(w, "Serial Key ["+cleanKey+"] tidak ditemukan", 401)
 		return
 	}
 
 	licenseData := result[0]
-	
-	// Cek apakah lisensi aktif
-	isActive, ok := licenseData["is_active"].(bool)
-	if ok && !isActive {
-		sendError(w, "Lisensi ini telah dinonaktifkan/diblokir", 401)
+	isActive, _ := licenseData["is_active"].(bool)
+	if !isActive {
+		sendError(w, "Lisensi tidak aktif", 401)
 		return
 	}
 
-	dbDeviceID, _ := licenseData["device_id"].(string)
-
-	// 3. Binding Hardware ID
-	if dbDeviceID == "" || dbDeviceID == nullString() {
-		// Update pertama kali
-		updateUrl := fmt.Sprintf("%s/rest/v1/licenses?id=eq.%v", sbUrl, licenseData["id"])
-		updateBody, _ := json.Marshal(map[string]string{
-			"device_id":    cleanDeviceID,
-			"activated_at": time.Now().Format(time.RFC3339),
-		})
-		
-		upReq, _ := http.NewRequest("PATCH", updateUrl, bytes.NewBuffer(updateBody))
-		upReq.Header.Set("apikey", sbKey)
-		upReq.Header.Set("Authorization", "Bearer "+sbKey)
-		upReq.Header.Set("Content-Type", "application/json")
-		client.Do(upReq)
-	} else if strings.TrimSpace(dbDeviceID) != cleanDeviceID {
-		sendError(w, "Lisensi ini sudah terkunci untuk perangkat lain", 403)
-		return
-	}
-
-	// 4. Data Lisensi
+	// 4. Proses Lisensi & Selesaikan
 	customerName, _ := licenseData["customer_name"].(string)
 	expiryDays := 365
 	if val, ok := licenseData["expiry_days"].(float64); ok {
@@ -114,35 +81,28 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	now := time.Now()
-	issuedAt := now.Format(time.RFC3339)
 	expiry := ""
 	if expiryDays > 0 {
 		expiry = now.AddDate(0, 0, expiryDays).Format("2006-01-02")
 	}
 
-	// 5. Signing
-	privKeyB64 := os.Getenv("LICENSE_PRIVATE_KEY")
+	// Sign
 	privKeyBytes, _ := base64.StdEncoding.DecodeString(strings.TrimSpace(privKeyB64))
 	privKey := ed25519.PrivateKey(privKeyBytes)
-
-	payload := LicensePayload{
-		IssuedTo: customerName,
-		DeviceID: cleanDeviceID,
-		IssuedAt: issuedAt,
-		Expiry:   expiry,
-	}
-
-	msg := fmt.Sprintf("%s|%s|%s|%s", payload.IssuedTo, payload.DeviceID, payload.IssuedAt, payload.Expiry)
+	msg := fmt.Sprintf("%s|%s|%s|%s", customerName, cleanDeviceID, now.Format(time.RFC3339), expiry)
 	sig := ed25519.Sign(privKey, []byte(msg))
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(LicenseFile{
-		Payload:   payload,
-		Signature: base64.StdEncoding.EncodeToString(sig),
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"payload": map[string]string{
+			"issued_to": customerName,
+			"device_id": cleanDeviceID,
+			"issued_at": now.Format(time.RFC3339),
+			"expiry":    expiry,
+		},
+		"signature": base64.StdEncoding.EncodeToString(sig),
 	})
 }
-
-func nullString() string { return "" }
 
 func sendError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
